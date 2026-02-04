@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/images/favicon-32x32.png">
+  <title>Dessert Shop | Version 2.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            red: { 600: '#c73b0f' },
+            rose: { 50: '#fcf8f5', 100: '#f4edeb', 300: '#caafa8', 400: '#ad8985', 500: '#87635a', 900: '#26110a' }
+          },
+          fontFamily: { sans: ['Red Hat Text', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #caafa8; border-radius: 10px; }
+  </style>
+</head>
+
+<body class="bg-rose-50 font-sans text-rose-900">
+
+  <main class="max-w-7xl mx-auto p-4 sm:p-8 lg:p-20">
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <div class="col-span-2">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold">
+         Desserts
+        </h1>
+
+        <div id="product-grid"  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl h-fit shadow-sm lg:sticky lg:top-10">
+
+        <h2 id="cart-title" class="text-2xl font-bold text-red-600 mb-6">Your Cart (0)</h2>
+        
+        <div id="empty-cart-view" class="flex flex-col items-center py-10">
+          <img src="./assets/images/illustration-empty-cart.svg" alt="Empty Cart">
+          <p class="text-rose-500 font-semibold mt-4 text-sm">Your added items will appear here</p>
+        </div>
+
+        <div id="active-cart-view" class="hidden">
+          <div id="cart-items-container" class="divide-y divide-rose-100 max-h-[400px] overflow-y-auto pr-2"></div>
+          <div class="mt-6">
+            <div class="flex justify-between items-center mb-6">
+              <span class="text-rose-900 text-sm">Order Total</span>
+              <span id="order-total-price" class="text-2xl font-bold text-rose-900">$0.00</span>
+            </div>
+            <div class="bg-rose-50 flex items-center justify-center gap-2 py-4 rounded-lg mb-6">
+              <img src="./assets/images/icon-carbon-neutral.svg" alt="Carbon Neutral">
+              <p class="text-sm">This is a <span class="font-bold">carbon-neutral</span> delivery</p>
+            </div>
+            <button onclick="confirmOrder()" class="w-full bg-red-600 text-white py-4 rounded-full font-bold hover:bg-[#a3310d] transition-colors">
+              Confirm Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="order-modal" class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50 p-4">
+    <div class="bg-white w-full max-w-lg rounded-xl p-10 max-h-[90vh] flex flex-col">
+      <img src="./assets/images/icon-order-confirmed.svg" alt="Confirmed" class="w-10 h-10 mb-6">
+      <h2 class="text-4xl font-bold mb-2">Order Confirmed</h2>
+      <p class="text-rose-500 mb-8">We hope you enjoy your food!</p>
+      
+      <div id="modal-items-list" class="bg-rose-50 rounded-lg p-6 overflow-y-auto divide-y divide-rose-100">
+        </div>
+
+      <button onclick="resetOrder()" class="w-full bg-red-600 text-white py-4 rounded-full font-bold mt-8 hover:bg-[#a3310d] transition-colors">
+        Start New Order
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const products = [
+      {"image":"./assets/images/image-waffle-desktop.jpg","name":"Waffle with Berries","category":"Waffle","price":6.50},
+      {"image":"./assets/images/image-creme-brulee-desktop.jpg","name":"Vanilla Bean Crème Brûlée","category":"Crème Brûlée","price":7.00},
+      {"image":"./assets/images/image-macaron-desktop.jpg","name":"Macaron Mix of Five","category":"Macaron","price":8.00},
+      {"image":"./assets/images/image-tiramisu-desktop.jpg","name":"Classic Tiramisu","category":"Tiramisu","price":5.50},
+      {"image":"./assets/images/image-baklava-desktop.jpg","name":"Pistachio Baklava","category":"Baklava","price":4.00},
+      {"image":"./assets/images/image-meringue-desktop.jpg","name":"Lemon Meringue Pie","category":"Pie","price":5.00},
+      {"image":"./assets/images/image-cake-desktop.jpg","name":"Red Velvet Cake","category":"Cake","price":4.50},
+      {"image":"./assets/images/image-brownie-desktop.jpg","name":"Salted Caramel Brownie","category":"Brownie","price":5.50},
+      {"image":"./assets/images/image-panna-cotta-desktop.jpg","name":"Vanilla Panna Cotta","category":"Panna Cotta","price":6.50}
+    ];
+
+    let cart = [];
+
+    function init() {
+      const grid = document.getElementById('product-grid');
+      grid.innerHTML = products.map(product => `
+        <div class="flex flex-col">
+          <div class="relative mb-8">
+            <img src="${product.image}" id="img-${product.name}" class="rounded-xl w-full border-2 border-transparent transition-all">
+            <button id="btn-add-${product.name}" onclick="addToCart('${product.name}')" class="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center gap-2 bg-white border border-rose-400 w-40 py-3 rounded-full font-bold text-sm hover:border-red-600 hover:text-red-600 shadow-md">
+              <img src="./assets/images/icon-add-to-cart.svg" alt="" class="w-5 h-5"> Add to Cart
+            </button>
+            <div id="qty-ctrl-${product.name}" class="hidden absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between w-44 bg-red-600 text-white px-4 py-3 rounded-full shadow-lg">
+              <button onclick="updateQty('${product.name}', -1)" class="border border-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-white hover:text-red-600 group">
+                <span class="mb-0.5">-</span>
+              </button>
+              <span id="qty-text-${product.name}" class="font-semibold text-sm">1</span>
+              <button onclick="updateQty('${product.name}', 1)" class="border border-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-white hover:text-red-600">
+                <span class="mb-0.5">+</span>
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-rose-500 text-xs">${product.category}</span>
+            <h2 class="font-bold text-rose-900 text-base">${product.name}</h2>
+            <span class="text-red-600 font-bold text-base">$${product.price.toFixed(2)}</span>
+          </div>
+        </div>
+      `)
+      .join('');
+      renderUI();
+    }
+
+    function addToCart(name) {
+      const product = products.find(p => p.name === name);
+      cart.push({ ...product, quantity: 1 });
+      renderUI();
+    }
+
+    function updateQty(name, delta) {
+      const item = cart.find(i => i.name === name);
+      if (item) {
+        item.quantity += delta;
+        if (item.quantity <= 0) {
+          removeFromCart(name);
+        } else {
+          renderUI();
+        }
+      }
+    }
+
+    function removeFromCart(name) {
+      cart = cart.filter(i => i.name !== name);
+      renderUI();
+    }
+    
+    function renderUI() {
+      const emptyView = document.getElementById('empty-cart-view');
+      const activeView = document.getElementById('active-cart-view');
+      const container = document.getElementById('cart-items-container');
+      const totalDisplay = document.getElementById('order-total-price');
+      const title = document.getElementById('cart-title');
+
+      let totalItems = 0;
+      let totalPrice = 0;
+
+      if (cart.length === 0) {
+        emptyView.classList.remove('hidden');
+        activeView.classList.add('hidden');
+      } else {
+        emptyView.classList.add('hidden');
+        activeView.classList.remove('hidden');
+        container.innerHTML = cart.map(item => {
+          totalItems += item.quantity;
+          totalPrice += (item.price * item.quantity);
+          return `
+            <div class="py-4 flex justify-between items-center">
+              <div class="flex flex-col gap-1">
+                <p class="font-bold text-rose-900 text-sm">${item.name}</p>
+                <div class="flex gap-2 items-center">
+                  <span class="text-red-600 font-bold text-sm">${item.quantity}x</span>
+                  <span class="text-rose-400 text-sm">@ $${item.price.toFixed(2)}</span>
+                  <span class="text-rose-500 font-bold text-sm">$${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              </div>
+              <button onclick="removeFromCart('${item.name}')" class="border border-rose-300 rounded-full w-5 h-5 flex items-center justify-center text-rose-300 hover:text-rose-900 hover:border-rose-900 transition-colors text-[10px]">
+                ✕
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      title.innerText = `Your Cart (${totalItems})`;
+      totalDisplay.innerText = `$${totalPrice.toFixed(2)}`;
+
+      products.forEach(p => {
+        const itemInCart = cart.find(i => i.name === p.name);
+        const img = document.getElementById(`img-${p.name}`);
+        const addBtn = document.getElementById(`btn-add-${p.name}`);
+        const qtyCtrl = document.getElementById(`qty-ctrl-${p.name}`);
+        const qtyText = document.getElementById(`qty-text-${p.name}`);
+
+        if (itemInCart) {
+          img.classList.add('border-red-600');
+          addBtn.classList.add('hidden');
+          qtyCtrl.classList.remove('hidden');
+          qtyText.innerText = itemInCart.quantity;
+        } else {
+          img.classList.remove('border-red-600');
+          addBtn.classList.remove('hidden');
+          qtyCtrl.classList.add('hidden');
+        }
+      });
+    }
+
+    function confirmOrder() {
+      const modal = document.getElementById('order-modal');
+      const list = document.getElementById('modal-items-list');
+      let total = 0;
+      
+      const itemsHtml = cart.map(item => {
+        total += (item.price * item.quantity);
+        return `
+          <div class="py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <img src="${item.image}" class="w-12 h-12 rounded">
+              <div class="overflow-hidden">
+                <p class="font-bold text-sm truncate">${item.name}</p>
+                <div class="flex gap-2 text-sm">
+                  <span class="text-red-600 font-bold">${item.quantity}x</span>
+                  <span class="text-rose-400">@ $${item.price.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            <p class="font-bold text-rose-900">$${(item.price * item.quantity).toFixed(2)}</p>
+          </div>
+        `;
+      }).join('');
+
+      list.innerHTML = itemsHtml + `
+        <div class="flex justify-between items-center pt-6 mt-2">
+          <span class="text-sm text-rose-900">Order Total</span>
+          <span class="text-2xl font-bold text-rose-900">$${total.toFixed(2)}</span>
+        </div>
+      `;
+      modal.classList.replace('hidden', 'flex');
+    }
+
+    function resetOrder() {
+      cart = [];
+      document.getElementById('order-modal').classList.replace('flex', 'hidden');
+      renderUI();
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+
